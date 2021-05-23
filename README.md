@@ -6,10 +6,10 @@ Long Description: The Choose Your own (CYO) Project is part of the requirements 
 
 This repository contains four main files:
 
-CYO_report_ab.Rmd <- Final project report in .rmd format
+  CYO_report_ab.Rmd <- Final project report in .rmd format
 
-CYO_report_ab.pdf <- Final project report in .pdf format
+  CYO_report_ab.pdf <- Final project report in .pdf format
 
-CYO_script_ab.R <- R script used to generate the report
+  CYO_script_ab.R <- R script used to generate the report
 
-heart_failure_clinical_records_dataset.csv <- Original dataset in .csv format
+  heart_failure_clinical_records_dataset.csv <- Original dataset in .csv format
