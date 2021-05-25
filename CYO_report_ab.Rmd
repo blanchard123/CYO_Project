@@ -1,0 +1,2110 @@
+---
+title: "Choose Your Own Capstone Project:  \n Predicting Survival in Patients with Heart Failure  \n HarvardX PH125.9x Data Science Capstone"
+author: "Adam J. E. Blanchard"
+date: "May 25, 2021"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    highlight: tango
+---
+\pagebreak
+
+```{r echo = FALSE, message = FALSE}
+
+# Install and load libraries as needed 
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(caretEnsemble)) install.packages("caretEnsemble", repos = "http://cran.us.r-project.org")
+if(!require(corrplot)) install.packages("corrplot", repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(gam)) install.packages("gam", repos = "http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+if(!require(ggthemes)) install.packages("ggthemes", repos = "http://cran.us.r-project.org")
+if(!require(gridExtra)) install.packages("gridExtra", repos = "http://cran.us.r-project.org")
+if(!require(gtsummary)) install.packages("gtsummary", repos = "http://cran.us.r-project.org")
+if(!require(kableExtra)) install.packages("kableExtra", repos = "http://cran.us.r-project.org")
+if(!require(knitr)) install.packages("knitr", repos = "http://cran.us.r-project.org")
+if(!require(markdown)) install.packages("markdown", repos = "http://cran.us.r-project.org")
+if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")
+if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
+if(!require(rcompanion)) install.packages("rcompanion", repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
+if(!require(rstatix)) install.packages("rstatix", repos = "http://cran.us.r-project.org")
+if(!require(scales)) install.packages("scales", repos = "http://cran.us.r-project.org")
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
+
+library(caret)
+library(caretEnsemble)
+library(corrplot)
+library(data.table)
+library(gam)
+library(ggplot2)
+library(ggthemes)
+library(gridExtra)
+library(gtsummary)
+library(knitr)
+library(kableExtra)
+library(markdown)
+library(party)
+library(randomForest)
+library(rcompanion)
+library(rpart)
+library(rstatix)
+library(scales)
+library(tidyverse)
+library(dplyr)
+
+# set digits to 6 and stop scientific notation 
+options(digits = 3)
+options(scipen = 999)
+
+```
+
+# Overview
+
+Cardiovascular diseases are the leading cause of death worldwide. They also result in hundreds of billions of dollars in direct and indirect costs. This project aimed to use machine learning models to predict patient mortality in a sample of 299 patients with heart failure. The dataset was collected from two hospitals in Pakistan in 2015 and made available to the public. This project describes the exploration of the dataset using visualization and summary statistics, inferential analyses of the relationships between the features and patient death, and the development of various machine learning models. Several variables were found to be associated with patient death depending on the analysis. Five variables were found to be related to patient death in the bivariate analyses and three remained in the multivariate logistic regression: age, ejection fraction, and serum creatinine. The machine learning models were able to predict death using all the features in the dataset as well as these three selected features. The performance of the predictive models was evaluated based on several metrics using cross-validation in the training dataset, as well as in a partitioned test dataset.
+
+## Introduction
+
+Cardiovascular diseases (CVDs) are a group of serious health disorders that impact the heart and blood vessels, including coronary heart disease, valvular heart disease, heart attack, heart failure, cerebrovascular diseases (strokes), and other conditions (Chicco & Jurman, 2020; Heart and Stroke Foundation Canada, 2020a). Overall, cardiovascular diseases are the leading cause of death worldwide, resulting in the deaths of approximately 17 million people each year and representing around 31% of global deaths per year (World Health Organization, 2017). 
+
+In the United States, CVDs are the leading cause of death for men, women, and most ethnic groups with around 100 people dying every hour (Centers for Disease Control and Prevention, 2020a). CVDs cost the United States approximately \$219 billion a year in health care, medication, and lost productivity. In Canada, CVDs are the second leading cause of death with around 12 people dying each hour, and it is the costliest disease economically with an estimated direct and indirect cost of \$21.2 billion (Heart and Stroke Foundation, 2020a; Public Health Agency of Canada, 2017). There are several well-known behavioural risk factors for developing CVDs, including tobacco use, unhealthy diet, and excessive alcohol use, as well as other risk factors including diabetes, hypertension, and obesity (Public Health Agency of Canada, 2017; World Health Organization, 2017). 
+
+Heart failure is a condition in which the muscles of the heart fail to adequately pump blood (Ahmad et al., 2017; Centers for Disease Control and Prevention, 2020b; Heart and Stroke Foundation, 2020b). Heart failure typically develops after the heart has been damaged or weakened; the muscles are then incapable of adequately pumping blood around the body. As well, the heart may not accommodate the flow of blood from the lungs to heart. As a result of these issues, the lungs and other parts of the body (e.g., ankles) may begin to back up with fluid. As a result, the individual may experience tiredness and difficulty breathing, which can ultimately lead to excessive fluid in the lungs (acute pulmonary edema). Heart failure is an extremely serious condition that can worsen if left untreated. There is no cure for heart failure, but several treatment and preventative measures are available. The most common causes are damage to the heart from a heart attack (myocardial infarction) and high blood pressure (hypertension). 
+
+Heart failure affects many people. Approximately 6.2 million in the United States and 600,000 in Canada are living with heart failure (Centers for Disease Control and Prevention, 2020b; Heart and Stroke Foundation, 2020b). As heart failure is potential life threatening, early diagnosis and treatment are imperative. Consequently, the ability to accurately forecast the development and course of this disorder, and other CVDs, is imperative. Although many risk factors and causes for heart failure has been identified, there is still much work to be done in this area. In particular, researchers and clinicians have yet to achieve high accuracy in predicting survival in patients with heart failure (Ahmad et al., 2017; Chicco & Jurman, 2020). 
+
+Machine learning in this context can be an efficient tool for developing predictive models and identifying useful features or risk factors for death from heart failure (Ahmad et al., 2017; Chicco & Jurman, 2020). That is, machine learning is a useful tool for predicting and identifying the most useful predictor variables. Machine learning has much potential in this context, as health records provide a plethora of potential useful information for uncovering relationships between various medical, physiological, and behavioural characteristics (and are often stored electronically). Various authors have attempted to use machine learning in this context; however, these reports generally yielded modest levels of accuracy at best and failed to achieve a consensus on the most important risk factors (Chicco & Jurman, 2020).
+
+## Aim of the Project
+
+This report was prepared as the final project for the HarvardX PH125.9x Data Science Capstone course; the final course required for the Professional Certificate in Data Science. The specific requirements of this projects instructed students to:
+
+* Apply machine learning techniques (i.e., at least two different models or algorithms must be used, with at least one being more advanced than linear or logistic regression)
+* Use a publicly available dataset that must be automatically downloaded with the code
+* Provide a written report documenting the analysis and presenting findings with supporting statistics and figures, as well as all the code used to prepare the report 
+
+This project aimed to examine the relationship between a number of potential predictor variables for death/survival in patients with cardiovascular disease, and then use machine learning to develop predictive models using a publicly available dataset. The dataset consisted of medical information for patients in heart failure collected in 2015 at the Faisalabad Institute of Cardiology and the Allied Hospital in Faisalabad, Pakistan (Ahmad et al., 2017). Specifically, this project (a) begins with a brief description of the variables, (b) details the data wrangling processes used (i.e., downloading, cleaning, and checking the data), (c) explores the dataset using summary statistics, visualization, and traditional inferential statistics, and (d) describes the training of several machine learning algorithms and examines their performance in a test dataset 
+
+## Dataset
+
+In this report, I analyzed a publicly available dataset that was released by Ahmad and colleagues (2017). The dataset contains the records of 299 patients with heart failure from the Faisalabad Institute of Cardiology and the Allied Hospital in Faisalabad, Pakistan from April to December 2015. All patients were diagnosed with left ventricular systolic dysfunction and prior heart failure. The dataset contains 299 rows each representing a patient and 13 columns each representing a feature of the patients (see Table 1). 
+
+```{r echo = FALSE}
+# create a dataframe describing the data
+heart_variables <- 
+  data.frame(Feature = c("Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                         "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                         "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", 
+                         "Time", "Death Event"),
+             Description = c("Age of patients in years",
+                             "Decrease in red blood cells",
+                             "Level of CPK in the blood",
+                             "Presence of diabetes",
+                             "Percentage of blood leaving heart",
+                             "Presence of hypertension",
+                             "Level of platelets in the blood",
+                             "Level of creatinine in the blood",
+                             "Level of sodium in the blood",
+                             "Biological sex - man or woman",
+                             "Presence of smoking",
+                             "Number of days to follow-up",
+                             "Death of patient during follow-up"),
+             Measurement = c("Numeric - years", "Boolean", "Numeric - mcg/L", "Boolean", 
+                             "Boolean", "Numeric - percentage", "Numeric - kp/mL",
+                             "Numeric - mg/dL", "Numeric - mEq/L", "Binary","Boolean", 
+                             "Numeric - days", "Boolean"),
+             Range = c("40 - 95", "0, 1", "23 - 7,861", "0, 1", "14 - 80", "0, 1",
+                       "25.01 - 850.00", "0.50 - 9.40", "114 - 148", "0, 1", "0, 1", 
+                       "4 - 285", "0, 1"))
+
+# convert the dataframe to a table describing the data 
+heart_variables %>% 
+  kbl(caption = "Variable Description, Measurement, and Range", align = "llcc") %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  footnote(general = c("Adapted from Chicco & Jurman (2020)", "mcg/L = micrograms per liter", "kp/mL = kiloplatelets/microliter", 
+                       "mEq/L = milliequivalents per litre"),
+           general_title = "") 
+```
+
+As seen, the dataset contains 13 variables covering a range of clinical and behavioural features. Seven of the variables are continuous, while the remaining six are binary. Notably, the outcome or target is binary or dichotomous, representing the survival (death event = 0) or death (death event = 1) of the patients during the follow-up period. For additional details about the data, please see the original publication (Ahmad et al., 2017). 
+
+Notably, it is unclear exactly how the time variable (i.e., length of follow-up period in days) was measure across patients, and how the follow-up period ended if the patient died. As seen below, the time variable is strongly correlated with death in the dataset. This may be an artifact of the measurement of this variable, without more specific indication of how this variable was measured (see Limitations). 
+
+Several authors have previously analyzed this dataset using a variety of different techniques. For instance, Ahmad and colleagues (2017) used survival analysis to predict death and identify the most important features in the dataset. Their analysis found that age, ejection fraction, serum creatinine, serum sodium, anemia, and high blood pressure were statistically related to the likelihood of death. As well, Zahid and colleagues (2019) used a similar survival analysis approach separated by gender to produce separate predictive models. The final models both included seven variables (four shared across gender and three unique to each gender). Finally, Chicco and Jurman (2020) employed a combination of regression and machine learning techniques. They compared the results of 10 different machine learning strategies using all the variables in the dataset. Using feature ranking, they also identified serum creatinine and ejection fraction as the two most important variables, and created separated models using just these variables. 
+
+\pagebreak
+
+# Data Wrangling and Inspection 
+
+```{r echo = FALSE}
+# template of code chunk 
+
+# Note: this process could take a minute
+
+# data stored on my github account 
+data_url <- "https://raw.githubusercontent.com/blanchard123/CYO_Project/main/heart_failure_clinical_records_dataset.csv"
+
+# download the csv file from github
+download.file(data_url, "heart_data.csv")
+
+# read the file into R and create numeric and logical variables (as appropriate)
+heart_data_l <- read_csv("heart_data.csv", col_types = cols(
+  age = col_double(),
+  anaemia = col_logical(),
+  creatinine_phosphokinase = col_double(),
+  diabetes = col_logical(),
+  ejection_fraction = col_double(),
+  high_blood_pressure = col_logical(),
+  platelets = col_double(),
+  serum_creatinine = col_double(),
+  serum_sodium = col_double(),
+  sex = col_logical(),
+  smoking = col_logical(),
+  time = col_integer(),
+  DEATH_EVENT = col_logical()))
+
+# create a separate file with numeric and factor variables (as appropriate)
+# converting from logical to factor variables can create issues, so two datasets are created 
+# read the file into R and correct the column types 
+heart_data_f <- read_csv("heart_data.csv", col_types = cols(
+  age = col_double(),
+  anaemia = col_factor(),
+  creatinine_phosphokinase = col_double(),
+  diabetes = col_factor(),
+  ejection_fraction = col_double(),
+  high_blood_pressure = col_factor(),
+  platelets = col_double(),
+  serum_creatinine = col_double(),
+  serum_sodium = col_double(),
+  sex = col_factor(),
+  smoking = col_factor(),
+  time = col_integer(),
+  DEATH_EVENT = col_factor()))
+
+# add value labels to the factor variables 
+# note only run once or will result in all NA to the selected variables 
+heart_data_f$anaemia <- factor(heart_data_f$anaemia, levels = c(0,1), labels = c("No","Yes"))
+heart_data_f$diabetes <- factor(heart_data_f$diabetes, levels = c(0,1), labels = c("No","Yes"))
+heart_data_f$high_blood_pressure <- factor(heart_data_f$high_blood_pressure, levels = c(0,1), labels = c("No","Yes"))
+heart_data_f$sex <- factor(heart_data_f$sex, levels = c(0,1), labels = c("Female","Male"))
+heart_data_f$smoking <- factor(heart_data_f$smoking, levels = c(0,1), labels = c("No","Yes"))
+heart_data_f$DEATH_EVENT <- factor(heart_data_f$DEATH_EVENT, levels = c(0,1), labels = c("No","Yes"))
+
+# convert age to integer variable in both datasets
+heart_data_f <- heart_data_f %>% mutate(age = as.integer(age))
+heart_data_l <- heart_data_l %>% mutate(age = as.integer(age))
+
+# remove uneccesary feature from environment 
+rm(data_url)
+
+# Save the datasets
+save(heart_data_l, file = "heart_data_l.RData")
+save(heart_data_f, file = "heart_data_f.RData")
+```
+
+The complete code to download the data is available in the supplemental code file. The included code will download the data and create two datasets. Due to known limitations in converting logical (i.e., Boolean) variables to factors in R, the included code creates two datasets that store the binary variables as logical variables and factors, respectively. The code also adds labels to the factor variables. The age variable was also converted to an integer variable, as only two values were not in integer format. Inspection of the data reveals no missing data for any variables and/or patients. 
+
+Table 2 presents the first ten rows of the data. As seen in the table, each row represents a single patient, and each column represents a different feature or variable. This is consistent with the description of the data having 299 patients (rows) and 13 features (columns). An examination of each of the variables in the dataset also reveals that each variable appropriately corresponds to the type in the description provided in Table 1. 
+
+```{r echo = FALSE}
+## examine the heart dataset as a table
+as_tibble(heart_data_f) %>% 
+  slice(1:10) %>% 
+  kbl(caption = "Examination of the Heart Data Structure", align = "c", 
+      col.names = c("Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes", 
+                    "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                    "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", "Time", 
+                    "Death Event")) %>%
+  row_spec(0, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10) %>%
+  kable_styling(latex_options = "scale_down")
+```
+
+Overall, the data was extremely clean and user friendly in its original format. The conditions of the dataset required very little in terms of data wrangling (i.e., no need to gather, spread, separate, unite, or join). As mentioned, the data was also stored as a single case along each row with features or variables represented by columns. This structure was appropriate for the current project. As evident in Tables 1 and 2, the dataset contains no string or date variables. As there were no string variables included, there was no need to detect, locate, extract, or replace these variables. Similarly, the lack of date variables meant no need to process these variables into more useable formats. Notably, some of the variable names have been changed slightly since the original publication reporting on the dataset (Ahmad et al., 2017; Chicco & Jurman, 2020). These changes were already present in the downloaded version of the data.
+
+\pagebreak
+
+# Exploratory Data Analysis
+
+Figure 1 presents a series of simple bar graphs presenting the raw frequency and percentage of each of the dichotomous variables in the dataset. Of note the graph in the upper left of the figure presents the frequency of the outcome (i.e., death event). From this plot, we see that more patients survived than not. Across the entire dataset, 203 patients survived (67.89%) and 96 patients died (32.11%) during the follow-up period. As well, the dataset contained 194 men (64.9%) and 105 women (35.1%). Notably, none of the dichotomous predictor variables display an exceptionally low base rate of occurrence. The outcome (i.e., patient mortality) and patient smoking have the lowest rates of occurrence at around 32% each.
+\
+```{r echo = FALSE, fig.height=6.5, fig.width=6.5, fig.align="center"}
+### basic frequency distributions of binary variables ###
+### all plots stored as separate objects ###
+
+# frequency distribution of anaemia
+fd_anm <- heart_data_f %>%
+  ggplot(aes(anaemia)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("Anaemia") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of diabetes
+fd_db <- heart_data_f %>%
+  ggplot(aes(diabetes)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("Diabetes") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of high blood pressure
+fd_hbp <- heart_data_f %>%
+  ggplot(aes(high_blood_pressure)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("High Blood Pressure") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of sex
+fd_sex <- heart_data_f %>%
+  ggplot(aes(sex)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("Sex") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of smoking
+fd_smk <- heart_data_f %>%
+  ggplot(aes(smoking)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("Smoking") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of death events 
+fd_death <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT)) +
+  geom_bar(color = "Black", fill = "#a6cee3") +
+  geom_text(aes(label = percent((..count..)/sum(..count..))), 
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  xlab("Death") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(fd_death, fd_anm, fd_db, fd_hbp, fd_sex, fd_smk,
+             ncol = 2,
+             top = "Figure 1: Frequency Distributions of the Dichotomous Variables",
+             left = "Frequency")
+```
+\
+Figure 2 presents a series of frequency distributions for all the continuous variables in the dataset with a vertical line indicating the mean value. As seen in this figure, there is considerable variability across the continuous variables. Two of the distributions appear unimodal and relatively symmetric (i.e., platelets and serum sodium), although they still present with some degree of asymmetry with a single long tail. Notably, creatinine phosphokinase and serum creatinine are presented in log base 10 scale to ease interpretation. These distributions are positively skewed with many observations clustered at the lower end of the distribution and a long tail in the upper end. As well, three of the distributions (i.e., age, ejection fraction, and length of follow-up) have numerous peaks; that is, they appear multimodal. Due to the asymmetric and multipeaked nature of some of these distributions, it may not be appropriate to rely on statistical procedures that are based on the normal distribution. That is, the assumption that these variables have normal distributions in the population or multivariate normal distributions may be violated and caution should be used in employing procedures with these assumptions. 
+\
+```{r echo = FALSE, fig.height=7.5, fig.width=6.5, fig.align="center"}
+### basic frequency distributions of continuous variables ###
+### all plots stored as separate objects ###
+
+# frequency distribution of age
+fd_age <- heart_data_f %>%
+  ggplot(aes(age)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$age), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of creatinine phosphokinase levels
+fd_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$creatinine_phosphokinase), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_log10(labels = comma) +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of ejection fraction levels
+fd_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$ejection_fraction), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of platelet levels
+fd_pl <- heart_data_f %>%
+  ggplot(aes(platelets)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$platelets), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of serum creatinine levels 
+fd_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$serum_creatinine), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_log10() +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of serum sodium levels 
+fd_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$serum_sodium), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# frequency distribution of time levels 
+fd_tm <- heart_data_f %>%
+  ggplot(aes(time)) +
+  geom_histogram(bins = 20, color = "Black", fill = "#a6cee3") +
+  geom_vline(xintercept = mean(heart_data_f$time), color = "black") +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(fd_age, fd_cp, fd_ef, fd_pl, fd_sc, fd_ss, fd_tm,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,NA)),
+             top = "Figure 2: Frequency Distributions of the Continuous Variables",
+             left = "Frequency")
+```
+\
+\
+Next, the variables were examined separated by patient death. Figure 3 displays a series of stacked bar graphs of all the dichotomous variables separated by death event. The axis presents the proportion of cases while the text displays the raw frequency and death is represented by colour. Based on these visualizations, it seems that the rates of these variables were relatively consistent between patients who survived and those who did not. The largest differences are evident for high blood pressure (around 8% higher likelihood of death in those with high blood pressure) and anaemia (around 6% higher likelihood of death in those with anaemia). In contrast, there appears to be less than a percent difference in mortality rates across the other three variables (i.e., diabetes, sex, and smoking). 
+\
+```{r echo = FALSE, fig.height=5.5, fig.width=6.5, fig.align="center"}
+### bar graphs by death event ###
+### all plots stored as separate objects ###
+
+# bar graph of anaemia by death event 
+bg_anm <- heart_data_f %>%
+  ggplot(aes(anaemia, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Anaemia") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# bar graph of diabetes by death event 
+bg_db <- heart_data_f %>%
+  ggplot(aes(diabetes, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Diabetes") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# bar graph of high blood pressure by death event 
+bg_hbp <- heart_data_f %>%
+  ggplot(aes(high_blood_pressure, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("High Blood Pressure") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# bar graph of sex by death event 
+bg_sex <- heart_data_f %>%
+  ggplot(aes(sex, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Sex") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# bar graph of smoking by death event 
+bg_smk <- heart_data_f %>%
+  ggplot(aes(smoking, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Smoking") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# create a common legend for the plots
+# need to create an entire dummy plot
+bg_smk_legend <- heart_data_f %>%
+  ggplot(aes(smoking, fill = DEATH_EVENT)) +
+  geom_bar(position = "fill", colour = "black") +
+  geom_text(aes(label = ..count..), stat = "count", position = position_fill(.5)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Smoking") +
+  theme_light() +
+  theme(axis.title.x = element_text()) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "right") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# function to extract the legend from a plot
+extract_legend <- function(my_ggp) {
+  step1 <- ggplot_gtable(ggplot_build(my_ggp))
+  step2 <- which(sapply(step1$grobs, function(x) x$name) == "guide-box")
+  step3 <- step1$grobs[[step2]]
+  return(step3)
+}
+
+# extract the legend as an object 
+shared_legend_3 <- extract_legend(bg_smk_legend)
+
+# arrange plots together in a grid for presentation 
+grid.arrange(bg_anm, bg_db, bg_hbp, bg_sex, bg_smk, shared_legend_3,
+             ncol = 3, layout_matrix = rbind(c(1,1,2,2,3,3), c(NA,4,4,5,5,6)),
+             top = "Figure 3: Bar Graphs of the Dichotomous Variables by Patient Death",
+             left = "Proportion")
+```
+\
+\pagebreak
+Table 3 presents descriptive statistics for the dichotomous variables. Specifically, the table presents the frequency and percentages for each of the variables overall and separated by death event. The table confirms the visualizations seen in Figure 3 with the rates of each feature remaining relatively consistent between patients who survived and those who did not. In particular, the mortality rates are quite consistent across diabetes, sex, and smoking. 
+\
+```{r echo = FALSE}
+# table of descriptive statistics of the dichotomous variables by death event
+heart_data_f %>% select(anaemia, high_blood_pressure, diabetes, sex, smoking, DEATH_EVENT) %>%
+  tbl_summary(by = DEATH_EVENT,
+              type = all_categorical() ~ "categorical",
+              digits = all_categorical() ~ 2,
+              label = list(anaemia ~ "Anaemia", high_blood_pressure ~ "High Blood Pressure",
+                           diabetes ~ "Diabetes", sex ~ "Sex", smoking ~ "Smoking")) %>% 
+  add_p(pvalue_fun = ~style_pvalue(.x, digits = 2)) %>%
+  add_overall() %>%
+  as_kable_extra(caption = "Descriptive Statistics for the Dichotomous Variables: Overall and by Death Event", align = "lcccc") %>%
+  add_header_above(c("", "", "Death Event" = 3), bold =T) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+\
+\pagebreak
+Figure 4 displays a series of boxplots of all the continuous variables separated by death event. Several of these variables appear to differ between patients who survived and those who did not. Based on the boxplots, it appears that patients who died were generally older, with lower ejection fraction, higher serum creatinine, and shorter follow-up periods. Serum sodium may also differ across death event, but the pattern is less apparent. In contrast, creatinine phosphokinase and platelet levels do not appear to differ across death event. 
+\
+```{r echo = FALSE, fig.height=7.5, fig.width=6.5, fig.align="center"}
+### boxplots of continuous variables by death event ###
+### all plots stored as separate objects ###
+
+# boxplot of age by death event
+bp_age <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, age, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of creatinine phosphokinase levels by death event
+bp_cp <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, creatinine_phosphokinase, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_log10(labels = comma) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Creatinine Phosph. (log)") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of ejection fraction levels by death event 
+bp_ef <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, ejection_fraction, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of platelet levels by death event 
+bp_pl <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, platelets, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(labels = comma, breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of serum creatinine levels by death event
+bp_sc <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, serum_creatinine, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_log10() +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of serum sodium levels by death event
+bp_ss <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, serum_sodium, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  ylab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# boxplot of time levels by death event
+bp_tm <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, time, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Death Event") +
+  ylab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# create a common legend for the plots
+# need to create an entire dummy plot
+bp_tm_legend <- heart_data_f %>%
+  ggplot(aes(DEATH_EVENT, time, fill = DEATH_EVENT)) +
+  geom_boxplot(color = "Black") +
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2.5, alpha = 0.25) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_fill_brewer(name = "Death", palette = "Paired") +
+  xlab("Death Event") +
+  ylab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_blank()) +
+  theme(axis.title.y = element_text(angle = 90, vjust = 2)) +
+  theme(legend.position = "right") +
+  theme(plot.margin = unit(c(0.5,0.5,0.25,0.5), "cm"))
+
+# extract the legend as an object 
+shared_legend_4 <- extract_legend(bp_tm_legend)
+
+# arrange plots together in a grid for presentation 
+grid.arrange(bp_age, bp_cp, bp_ef, bp_pl, bp_sc, bp_ss, bp_tm, shared_legend_4,
+             ncol = 3, layout_matrix = rbind(c(1,2,3), c(4,5,6), c(NA,7,8)), 
+             top = "Figure 4: Boxplots of the Continuous Variables by Patient Death")
+```
+\
+\pagebreak
+Table 4 presents descriptive statistics for the continuous variables. Specifically, the table presents summary statistics of the continuous variables over the entire dataset and separated by patient mortality. Evident from this table is the positive skew seen in creatinine phosphokinase and serum creatinine, as they demonstrate considerable divergence between the mean and median values both overall and across death event. Of note, the time variable (i.e., days to follow-up) shows inconsistent differences between the mean and median values across the groups. Consistent with the plots seen in Figure 4, this table highlights the fact that many of these features varied across patients based on their survival during the follow-up period.
+\
+```{r echo = FALSE}
+# table of descriptive statistics of the continuous variables by death event
+heart_data_f %>% select(age, creatinine_phosphokinase, ejection_fraction, platelets, 
+                        serum_creatinine, serum_sodium, time, DEATH_EVENT) %>%
+  tbl_summary(by = DEATH_EVENT,
+              type = all_continuous() ~ "continuous2",
+              statistic = all_continuous() ~  c("{mean} ({sd})", "{median} ({p25}, {p75})"), 
+              digits = all_continuous() ~ 2,
+              label = list(age ~ "Age", creatinine_phosphokinase ~ "Creatinine Phosphokinase",
+                           ejection_fraction ~ "Ejection Fraction", platelets ~ "Platelets", 
+                           serum_creatinine ~ "Serum Creatinine", serum_sodium ~ "Serum Sodium", 
+                           time ~ "Length of Follow-up")) %>% 
+  add_p(pvalue_fun = ~style_pvalue(.x, digits = 2)) %>%
+  add_overall() %>%
+  modify_footnote(all_stat_cols() ~ "Mean (SD) or Median (IQR)") %>%
+  as_kable_extra(caption = "Descriptive Statistics for the Continuous Variables: Overall and by Death Event", align = "lcccc") %>%
+  add_header_above(c("", "", "Death Event" = 3), bold =T) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic_2(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10) %>%
+  kable_styling(latex_options = "scale_down")
+```
+\
+Figures A1 through A5 present visualizations of the continuous variables across each of the five dichotomous features grouped by death event (see Appendix A for supplemental graphs). Each of the figures focused on a different dichotomous feature, anaemia in Figure A1, diabetes in Figure A2, high blood pressure in Figure A3, sex in Figure A4, and smoking in Figure A5. For each of the dichotomous features represented on the vertical axes, the figure presents a series of visualizations for each of the continuous variables represented on the horizontal axes separated by death event represented by colour and shape. The graphs also include the mean values represented by the larger black shapes. 
+
+Inspection of these figures highlights the impact of each of the continuous features on the likelihood of death across the dichotomous features. Overall, these figures reveal no obvious interactions:
+
+* With respect to anaemia (Figure A1), the effects of the continuous variables appear to be consistent between those with and those without anaemia. Only creatinine phosphokinase varies slightly in mean values across those with and without anaemia. 
+* Looking at diabetes (Figure A2), the continuous variables appear to display similar patterns across those with and those without diabetes. Minor differences are seen in some variables; slightly larger differences in age and ejection fraction are present for those without diabetes. 
+* Examining Figure A3, the patterns in the continuous variables with respect to patient death appear to be rather consistent across those with and without high blood pressure. Slightly larger mean differences are apparent in creatinine phosphokinase and ejection fraction for those with diabetes.
+* The same consistency in the impacts of the continuous features is seen across sex in Figure A4. The effect of age and ejection fraction appear slightly larger in men than women, whereas platelet levels may have greater effect in women than men. 
+* Finally, the variables do not display any obvious variability in effects across smoking (Figure A5). From these graphs, age and ejection fraction appear to be more discriminative in smokers than non-smokers. 
+
+Additionally, Figures A6 and A7 present visualizations of the continuous features across each other grouped by death event (see Appendix A). Figure A6 presents days to follow-up on the vertical axes with various other continuous features along the horizontal axes separated by death event represented by colour and shape. The graph also includes ellipses around the data separated by patient death. It is apparent from Figure A6 that overall patients are more likely to die earlier in the follow-up period (i.e., fewer days in the follow-up period), which is consistent with what was observed in Figure 4 and Table 4. Also consistent with the previous figures, the likelihood of death appears to be higher in older patients, as well as patients with lower ejection fraction and higher serum creatinine levels. 
+
+Figure A7 presents the bivariate distributions of select continuous variables (i.e., age, ejection fraction, serum creatinine, and serum sodium) separated by death event represented by colour and shape. The graph also includes ellipses around the data separated by patient death. Once again, this figure reveals the influence of age, ejection fraction, and serum creatinine on the likelihood of death. Overall, based on these visualizations, no strong, clear, or identifiable interactions seem to be present. 
+
+\pagebreak
+
+# Traditional Inferential Analysis
+
+Several inferential procedures were used to analyze the data. Specifically, Mann-Whitney U tests, Pearson’s chi-squared tests, and correlations were used to investigate the relationship between each of the features and patient death. Each of these tests was used based on the type of feature being investigated (i.e., dichotomous, or continuous) to determine the effect of that feature on the likelihood of death. In addition, multivariate logistic regression was used to determine the relationship between all the features and patient death. 
+
+The relationships between the dichotomous features and death event were first examined using Pearson’s Chi-squared test for independence. This procedure tests the likelihood that an observed difference in the frequencies across the categories is due to chance (Howell, 2013; Privitera, 2018). That is, this test examines the extent to which the frequencies of two categorical variables are dependent upon each other and, thus, related to each other. Table 3 presents the results of the Chi-squared tests along with the descriptive statistics for all the dichotomous features (see above). As seen, none of the dichotomous predictors influenced the likelihood of patient death according to these analyses (i.e., all p-values in Table 3 are non-significant). In other words, the likelihood of dying does not vary across levels of these dichotomous features. 
+
+Mann-Whitney U tests (also known as the Wilcoxon rank sum tests) were used for the continuous variables. This test examines whether the distributions of each of the feature are the same across levels of the outcome (Howell, 2013; Privitera, 2018). That is, the procedure tests whether the distribution of each feature in those that survived and those that died are from the same population. Table 4 presents the results of the Mann-Whitney U tests in the final column (see above). According to these analyses, five of the continuous variables are related to patient death: age, ejection fraction, serum creatinine, serum sodium, and length of follow-up. This is consistent with the visualizations in Figure 4. 
+
+In addition, correlations between all the variables were examined. Correlation coefficients describe the strength and direction of a given type of relationship between two variables (Howell, 2013; Privitera, 2018). Linear relationships were investigated in this instance. Correlations were examined independently for each variable using Pearson’s correlations, point-biserial correlations, and phi correlations as appropriate depending on the types of variables (ie., two continuous, one continuous and one dichotomous, or two dichotomous, respectively). 
+
+Figure 5 presents the correlations between all the variables in the dataset. This figure displays the correlation coefficients represented by size and colour. The significance level of each of the correlations is also indicated in the figure (i.e., * = p < .05, ** < .01, *** = p < .001). The results of these analyses are consistent with the data presented in Tables 3 and 4. The same five features are related to patient death: age, ejection fraction, serum creatinine, serum sodium, and length of follow-up. In particular, patients are more likely to die if they are older, and have higher serum creatinine, lower ejection fraction, and lower serum sodium. As well, time or length of follow-up was correlated with patient death; however, it is unclear whether this is due to the measurement of this variable or a legitimate effect (see Limitations). 
+
+Several other notable relationships are evident in Figure 5. In addition to being correlated with patient death, age is also correlated with serum creatinine and length of follow-up (see Figure A6 for bivariate plots). Ejection fraction is correlated with serum sodium and sex (see Figure A7 and A4 for bivariate plots, respectively). Serum creatinine is also correlated with serum sodium and length of follow-up (see Figure A6 and A7, respectively).
+
+Focusing on the prediction of patient mortality, Table 5 displays the correlation coefficients and significance level for each of the features in descending order of strength. The strongest relationship is evident for length of follow-up (r = -.527). However, due to the reasons mentioned, this variable may be unreliable. Of the remaining features that are related to patient death, the strongest relationships only account for an estimated 8.7% (serum creatinine) and 7.2 % (ejection fraction) of the variability in patient mortality.
+\
+```{r echo = FALSE, fig.height=6.5, fig.width=6.5, fig.align="center"}
+### correlations ###
+
+# create correlation matrix 
+cmat <- cor(heart_data_l)
+colnames(cmat) <- c("Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                    "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                    "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", 
+                    "Time", "Death Event")
+rownames(cmat) <- c("Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                    "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                    "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", 
+                    "Time", "Death Event")
+
+# create correlation test data
+res1 <- cor.mtest(heart_data_l, conf.level = 0.95)
+
+# create heatmap of correlation matrix between all variables with extras
+corrplot::corrplot(cmat,
+                   type = "lower",
+                   method = "square",
+                   tl.col = "black",
+                   tl.cex = 0.7,
+                   title = "Figure 5: Correlation Matrix",
+                   p.mat = res1$p,
+                   insig = "label_sig",
+                   sig.level = c(.001, .01, .05),
+                   pch.cex = 0.9, 
+                   pch.col = "white",
+                   mar = c(1,1,3,1))
+```
+\
+```{r echo = FALSE}
+# correlations between death event and other variables - dataframe
+correlations <- cor(heart_data_l, heart_data_l$DEATH_EVENT)
+r_square <- (correlations)^2
+temp_data <- data.frame(r_square = r_square, cor = correlations, p = res1$p[,13])
+temp_data <- temp_data[-c(13), ]
+rownames(temp_data) <- c("Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                         "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                         "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", "Time")
+
+# create table of correlations data
+temp_data[order(temp_data$r_square, decreasing = T),] %>%
+  kbl(caption = "Correlations with Death Event", 
+      col.names = c("r squared", "r", "p-value"), 
+      align = "ccc",
+      digits = 3) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+\
+\pagebreak
+
+Finally, logistic regression was used to determine the relationship between all the features and patient mortality. Logistic regression is a regression modeling technique for fitting a function to data in which the outcome is dichotomous or binary (Howell, 2013). Two logistic regression analyses were performed. First, all the variables were included in the logistic regression model. Then, due to the unknown and possibly unreliable measurement of the time variable, it was removed and the analysis was performed again. 
+
+The results of both models’ overall goodness of fit are presented in Table 6. This table presents three common pseudo-R-squared coefficients that assess the overall effect of the model. In all instances larger values correspond to better model fit. As seen, the regression model including all the predictors yielded better overall goodness of fit compared to the model without this variable. The time variable appears to be strongly related to patient death, as the second analysis produced quite lower values.  
+\
+```{r echo = FALSE}
+### logistic regressions ###
+
+# logistic regression with all features including time
+fit_glm <- glm(DEATH_EVENT ~ ., data = heart_data_l, family = "binomial")
+
+# more results of logistic regression - overall model fit
+fit_glm_r2 <- nagelkerke(fit_glm)$Pseudo.R.squared 
+colnames(fit_glm_r2) <- c("All Features")
+
+# logistic regression without the TIME variable 
+fit_glm2 <- glm(DEATH_EVENT ~ age + anaemia + creatinine_phosphokinase + diabetes +
+                  ejection_fraction +  high_blood_pressure + platelets + serum_creatinine + 
+                  serum_sodium + sex + smoking, data = heart_data_l)
+
+# more results of logistic regression - overall model fit - comparing both models 
+fit_glm_r2 <- fit_glm_r2 %>% cbind(nagelkerke(fit_glm2)$Pseudo.R.squared)
+colnames(fit_glm_r2) <- c("All Features", "No Time Feature")
+
+fit_glm_r2 %>%
+  kbl(caption = "Logistic Regression - Overall Model Fit", align = "cc") %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+\
+In addition, Table 7 and 8 present the logistic regression results for the individual feature coefficients. Table 7 presents the coefficients for the model including all features, and Table 8 presents the coefficients for the model that does not include the time variable as a predictor. The bolded rows in these tables correspond with the features found to be independently contributing to the regression models. 
+
+The results of the logistic regression models are largely consistent with the previous analyses. For instance, with all features included in the regression, four variables are related to patient mortality: age, ejection fraction, serum creatinine, and time. Note that serum sodium, which was correlated with patient death in the bivariate analyses, was no longer independently contributing to the regression model. 
+
+When time is not included in the model as seen in Table 8, only three features are related to patient death: age, ejection fraction, and serum creatinine. Note that in this instance, when time is removed, the associations between creatinine phosphokinase and sodium serum with patient death increase (although still slightly below reaching statistical significance). 
+\
+```{r echo = FALSE}
+# more results of logistic regression - coefficients table - time included
+fit_glm_co <- summary(fit_glm)$coefficients 
+rownames(fit_glm_co) <- c("(Intercept)", "Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                          "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                          "Serum Creatinine", "Serum Sodium", "Sex", "Smoking", "Time")
+
+fit_glm_co %>%
+  kbl(caption = "Logistic Regression Coefficients - All Features", 
+      align = "lccc", col.names = c("Estimate", "Std. Error", "Z", "p")) %>%
+  row_spec(0, bold = T) %>%
+  row_spec(2, bold = T) %>%
+  row_spec(6, bold = T) %>%
+  row_spec(9, bold = T) %>%
+  row_spec(13, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+
+# more results of logistic regression - coefficients table - no time 
+fit_glm_co2 <- summary(fit_glm2)$coefficients 
+rownames(fit_glm_co2) <- c("(Intercept)", "Age", "Anaemia", "Creatinine Phosphokinase", "Diabetes",
+                           "Ejection Fraction", "High Blood Pressure", "Platelets", 
+                           "Serum Creatinine", "Serum Sodium", "Sex", "Smoking")
+
+fit_glm_co2 %>%
+  kbl(caption = "Logistic Regression Coefficients - No Time Feature", 
+      align = "lccc", col.names = c("Estimate", "Std. Error", "Z", "p")) %>%
+  row_spec(0, bold = T) %>%
+  row_spec(2, bold = T) %>%
+  row_spec(6, bold = T) %>%
+  row_spec(9, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+\
+
+Based on traditional descriptive and inferential analyses, many of the variables in the dataset have potential for predicting patient mortality using machine learning models. The time variable, representing the length of the follow-up period, presented the strongest association with patient death, yet the measurement of this variable presents problems for inclusion in predictive models. Resultingly, age, ejection fraction, and serum creatinine presented with the strongest associations with patient mortality. Serum sodium was only associated with patient death in the bivariate analyses, but not the logistic regression analyses.
+
+\pagebreak
+
+# Modeling Approaches  
+
+The following sections concern the binary prediction of patient death during the follow-up period using machine learning algorithms.  In attempts to predict patient death, six different machine learning models were employed: boosted generalized linear model (GLM), k-nearest neighbours (KNN), generalized additive model using loess (gamLoess), conditional inference random forest (cForest), quantile random forest (Random Forest or rf), and classification and regression tree (rpart). 
+
+Each of these approaches is suited for this classification task with their respective advantages and disadvantages (Irizarry, 2019). For instance, KNN models involve grouping the data into strata or neighbourhoods that are thought to be constant and averaging across these neighbourhoods. The number of neighbourhoods is a tuning parameter that was determined using cross-validation (discussed below). The two random forest approaches (cForest and RF) involve constructing many decision trees and then taking the mode or average of these trees for prediction. Random forest techniques also randomly determine which features to include in each decision tree. The default tuning parameters were used from the caret package for all the models (except the GLM models which does not have any tuning parameters). 
+
+Based on the exploratory data analysis and inferential analysis, several strategies were employed during the machine learning stage. Overall, it appears that age, ejection fraction, and serum creatinine have the greatest potential for predicting patient death. Although, the length of the follow-up period was also strongly correlated with patient death, it was excluded from these models (see Limitations). There was some evidence that additional variables may be helpful in the predictive models, and many machine learning algorithms benefit from including a larger number of features. As such, the first set of predictive models included all the features (except time), while the second set included only a select number of features. The features for the second set of models were selected based on the bivariate and multivariate relationships presented above (see Inferential Analysis), as well as feature ranking in the first set of predictive models with all features. 
+
+In this instance, the task is that of classification, as the outcome is categorical and specifically dichotomous (Irizarry, 2019). As such, many of the machine learning algorithms will provide a decision rule of the form – if f~1~(x~1~,x~2~,…,x~p~) > C, predict the positive category, otherwise predict the negative category, with C equal to a specific cut-off. As the outcome is dichotomous, our prediction will be either right or wrong. This has implications for how we measure the accuracy of the predictive models. In this project, accuracy was assessed using several metrics. The simplest metric is the proportion of cases that are correctly classified, known as overall accuracy. Table 9 shows the common metrics available to judge accuracy in this context. 
+
+```{r echo = FALSE}
+# create data frame describing the accuracy metrics
+model_acc <- 
+  data.frame(Feature = c("Accuracy", "Kappa", "Sensitivity", "Specificity", "PPV", "NPV", "Precision", "Recall", 
+                         "F1", "Prevalence", "Detection Rate", "Detection Prevalence", "Balanced Accuracy"),
+             Description = c("Proportion of true positives and true negatives over all instances",
+                             "Measure of agreement accounting for random chance*",
+                             "Proportion of true positives over actual positives",
+                             "Proportion of true negatives over actual negatives",
+                             "Proportion of true positives over predicted positives*",
+                             "Proportion of true negatives over predicted negatives*",
+                             "Proportion of true positives over predicted positives",
+                             "Proportion of true positives over actual positives",
+                             "Harmonic average of precision and recall*",
+                             "Proportion of actual positives over total",
+                             "Proportion of true positives over total",
+                             "Proportion of predicted positives over total",
+                             "(sensitivity + specificity)/2"))
+
+# convert the dataframe to a table describing the accuracy metrics
+model_acc %>% 
+  kbl(caption = "Model Accuracy Metrics", align = "ll") %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10) %>%
+  footnote(general = c("Adapted from Irizarry (2019) and the caret package description."),
+           symbol = c("These metrics are calculated using more complex definitions in the caret package."),
+           general_title = "")
+```
+
+## Data Preparation
+
+First, the data was randomly split into training (80%) and test (20%) datasets. An 80/20 split was used due to the relatively small size of the dataset (n = 299). With this split, the test dataset will have greater potential of providing a stable estimate of the accuracy of the models. The size of the dataset presents a limitation as any splitting results in proportionality smaller datasets that may not correspond with the overall patterns amongst the variables (see Limitations). After splitting the dataset, the training dataset included 238 patients with 162 (68.1%) survived and 76 (31.9%) deceased, while the test dataset contained 61 patients with 41 (67.2%) survived and 20 (32.8%) deceased. 
+
+Cross-validation was used during the training phase to maximize the use of the small sample size and to tune the hyper-parameters for the machine learning models. As the dataset is relatively small, computation time was not a major concern in increasing the number of folds in the cross-validation. Larger numbers of folds also provide better estimate of the overall data; thus, 100-fold cross validation was used selecting 90% of the training dataset. Reminder, the code used to partition the dataset and set the cross-validation parameters, as well as all code for this project, is available in the supplemental code file.  
+
+Notably, the training dataset will be used for developing several predictive models and tuning the model parameters. The various models will be compared first on their performance in the training dataset with cross-validation. That is, each of the models will be examined based on their performance across the cross-validation in the training dataset, specifically focusing on overall accuracy and kappa values. Subsequently, the best models will be evaluated using the test dataset (i.e., the test dataset will only be used to evaluate the final models). The performance of the models in the test dataset will include all the metrics described in Table 9; however, balanced accuracy and F1 will be used as the primary metrics for comparison across models in the test phase.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, results = FALSE}
+########## Data preparation for algorithm training ########## 
+
+# partition the heart dataset into training and test datasets
+
+
+# partition the heart dataset into training and test datasets
+set.seed(1, sample.kind = "Rounding")
+test_index <- createDataPartition(y = heart_data_f$DEATH_EVENT, 
+                                  times = 1, p = 0.2, list = FALSE)
+
+heart_train <- heart_data_f[-test_index,]
+heart_test <- heart_data_f[test_index,]
+
+# save the training and test datasets
+save(heart_train, file = "heart_train.RData")
+save(heart_test, file = "heart_test.RData")
+
+# examine frequency of outcome in both datasets 
+table(heart_train$DEATH_EVENT)
+table(heart_test$DEATH_EVENT)
+
+# set the seed for reproducibility 
+set.seed(1, sample.kind = "Rounding")
+
+# set cross-validation with 100 samples 
+my_control <- trainControl(method = "cv", number = 100, p = .9,
+                           savePredictions = "all",
+                           classProbs = TRUE,
+                           allowParallel = TRUE,
+                           index = createResample(heart_train$DEATH_EVENT, 10))
+
+# set the seed for reproducibility 
+set.seed(1, sample.kind = "Rounding")
+
+# train multiple models at the same time - all features 
+train_models <- caretList(DEATH_EVENT ~ age + anaemia + creatinine_phosphokinase + diabetes +
+                            ejection_fraction +  high_blood_pressure + platelets + serum_creatinine + 
+                            serum_sodium + sex + smoking,
+                          data = heart_train,
+                          trControl = my_control,
+                          methodList = c("cforest", "glm", "knn", "gamLoess", "rf", "rpart"),
+                          continue_on_fail = FALSE, 
+                          preProcess = c("center", "scale"))
+
+# set the seed for reproducibility 
+set.seed(1, sample.kind = "Rounding")
+
+# train multiple models at the same time - select features (age, ejection fraction, and serum creatinine)
+train_models2 <- caretList(DEATH_EVENT ~ age + ejection_fraction + serum_creatinine,
+                           data = heart_train,
+                           trControl = my_control,
+                           methodList = c("cforest", "glm", "knn", "gamLoess", "rf", "rpart"),
+                           continue_on_fail = FALSE, 
+                           preProcess = c("center", "scale"))
+```
+
+## Model Training and Tuning
+
+After splitting the dataset, all the machine learning models were run using all the features (except time) as predictors. Figure 6 presents the overall accuracy of all six models using cross-validation in the training dataset. Overall, the random forest techniques (RF and cForest) yielded the largest overall accuracy, whereas KNN yielded the lowest. Most of the models achieved similar accuracy between 0.71 and 0.75, except the KNN model. The KNN model also showed more variability compared to the other models, with rpart producing the lowest variability in accuracy with cross-validation. 
+\
+```{r echo = FALSE, fig.height=3.5, fig.width=6.5, fig.align="center"}
+# plot the accuracy of the models in the training set cross-validation - all features
+resamples <- resamples(train_models)
+dotplot(resamples, metric = "Accuracy", 
+        main = "Figure 6: Accuracy in Cross-Validation - All Features") 
+```
+\
+\
+Four of the machine learning models included tuning parameters. Figure A8 presents the results of the tuning parameters for relevant models using cross-validation (see Appendix). The default tuning options provided for each machine learning model were used. 
+
+Figure 7 displays the results of the feature ranking analysis provided by several of the machine learning models. These plots indicate the relative importance of each feature in the predictive models. The plots are largely consistent with the patterns identified earlier based on the visualizations and inferential analyses. Across all the models, serum creatinine and ejection fraction were listed as the most important features in the model. That is, all models have these two features as the first and second highest ranking (i.e., serum creatinine ranked first in three models and ejection fraction ranked first in the other two). Age is consistently ranked as the third most important feature in the models. These are the variables that were previously identified as having the strongest relationships with patient mortality. 
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+# plot variable importance for each relevant model 
+imp1 <- plot(varImp(train_models$cforest), xlab = "cforest")
+imp2 <- plot(varImp(train_models$glm), xlab = "GLM")
+imp3 <- plot(varImp(train_models$gamLoess), xlab = "gamLoess")
+imp4 <- plot(varImp(train_models$rf), xlab = "Random Forest")
+imp5 <- plot(varImp(train_models$rpart), xlab = "rpart")
+
+# arrange variable importance plots together in a grid for presentation 
+grid.arrange(imp1, imp2, imp3, imp4, imp5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(NA,5,5,NA)), 
+             top = "Figure 7: Variable Importance across Models")
+```
+\
+\pagebreak
+
+Based on the feature ranking presented in Figure 7 and the previous exploratory and inferential analyses, a second set of predictive models was trained using only age, ejection fraction, and serum creatinine as predictors. Figure 8 presents the overall accuracy of the six models with only these three features. Generally, the models yielded higher accuracy using only these three predictors. The two random forest models (cforest and RF), the linear model (GLM), and the additive model (gamLoess) produced the largest accuracies around 0.75. KNN again produced the lowest accuracy in the cross-validation. 
+\
+```{r echo = FALSE, fig.height=3.5, fig.width=6.5, fig.align="center"}
+# plot the accuracy of the models in the training set cross-validation - select features 
+resamples2 <- resamples(train_models2)
+dotplot(resamples2, metric = "Accuracy", 
+        main = "Figure 8: Accuracy in Cross-Validation - Select Features") 
+```
+
+Additionally, Table 10 displays the same results of the machine learning models including both accuracy and kappa values along with standard deviations. Looking at the table, it is more evident that four of the models improved by only including the three features (cForest, GLM, KNN, and Loess). The accuracy and kappa for these models improved with only three features. In contrast, the accuracy was worse but the kappa value better for the random forest model with only three predictors. Finally, the rpart model yielded better accuracy and kappa values when all variables were included in the model.
+
+```{r echo = FALSE}
+# dataframe of results of all models in the training cross-validation
+train_results <- data.frame(
+  Model = c("cForest", "GLM", "KNN", "Loess", "RF", "rpart"),
+  Accuracy1 = c(max(train_models$cforest$results$Accuracy), 
+                max(train_models$glm$results$Accuracy),
+                max(train_models$knn$results$Accuracy),
+                max(train_models$gamLoess$results$Accuracy), 
+                max(train_models$rf$results$Accuracy), 
+                max(train_models$rpart$results$Accuracy)),
+  AccuracySD1 = c(min(train_models$cforest$results$AccuracySD), 
+                  min(train_models$glm$results$AccuracySD),
+                  min(train_models$knn$results$AccuracySD),
+                  min(train_models$gamLoess$results$AccuracySD), 
+                  min(train_models$rf$results$AccuracySD), 
+                  min(train_models$rpart$results$AccuracySD)),
+  Kappa1 = c(max(train_models$cforest$results$Kappa), 
+             max(train_models$glm$results$Kappa),
+             max(train_models$knn$results$Kappa),
+             max(train_models$gamLoess$results$Kappa), 
+             max(train_models$rf$results$Kappa), 
+             max(train_models$rpart$results$Kappa)),
+  KappaSD1 =  c(min(train_models$cforest$results$KappaSD), 
+                min(train_models$glm$results$KappaSD),
+                min(train_models$knn$results$KappaSD),
+                min(train_models$gamLoess$results$KappaSD), 
+                min(train_models$rf$results$KappaSD), 
+                min(train_models$rpart$results$KappaSD)),
+  Accuracy2 = c(max(train_models2$cforest$results$Accuracy), 
+                max(train_models2$glm$results$Accuracy),
+                max(train_models2$knn$results$Accuracy),
+                max(train_models2$gamLoess$results$Accuracy), 
+                max(train_models2$rf$results$Accuracy), 
+                max(train_models2$rpart$results$Accuracy)),
+  AccuracySD2 = c(min(train_models2$cforest$results$AccuracySD), 
+                  min(train_models2$glm$results$AccuracySD),
+                  min(train_models2$knn$results$AccuracySD),
+                  min(train_models2$gamLoess$results$AccuracySD), 
+                  min(train_models2$rf$results$AccuracySD), 
+                  min(train_models2$rpart$results$AccuracySD)),
+  Kappa2 = c(max(train_models2$cforest$results$Kappa), 
+             max(train_models2$glm$results$Kappa),
+             max(train_models2$knn$results$Kappa),
+             max(train_models2$gamLoess$results$Kappa), 
+             max(train_models2$rf$results$Kappa), 
+             max(train_models2$rpart$results$Kappa)),
+  KappaSD2 =  c(min(train_models2$cforest$results$KappaSD), 
+                min(train_models2$glm$results$KappaSD),
+                min(train_models2$knn$results$KappaSD),
+                min(train_models2$gamLoess$results$KappaSD), 
+                min(train_models2$rf$results$KappaSD), 
+                min(train_models2$rpart$results$KappaSD)))
+
+# table of accruacy and kappa in the cross-validation - all models 
+train_results %>%
+  kbl(caption = "Accuracy in Cross-Validation", 
+      align = "lcccccccc", col.names = c("Model", "Accuracy", "(SD)", "Kappa", "(SD)", "Accuracy", "(SD)", "Kappa", "(SD)")) %>%
+  add_header_above(c("", "All Features" = 4, "Select Features" = 4), bold =T) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+
+From these results, the generalized linear model (GLM) and k-nearest neighbours (KNN) model were dropped from the analyses. The other four machine learning models (i.e., cForest, Loess, RF, and rpart) were selected based on their performance across both the full feature and selected features models. Therefore, eight final models (i.e., four machine learning techniques with all and selected features) were chosen to be compared in the test dataset. Part of this decision was aimed at allowing for comparisons across models with multiple features, which can increase the model’s robustness or generalizability to new data, to those with only select features, which may be more accurate due to the reduction in noise from the other variables.
+
+\pagebreak
+
+# Results on Validation Dataset
+
+Table 11 presents the results of the predictive models in the test dataset. As a reminder, this dataset was partitioned from the original dataset prior to training and tuning the machine learning algorithms; it is only being used to evaluate the final models. The models performed similar in the test dataset compared to the cross-validation results. That is, comparing Table 11, which shows the results in the test dataset, with Table 10, which shows the results using cross-validation in the training dataset, the accuracies were in the same general range (around 0.70 to 0.75).
+
+```{r echo = FALSE, message=FALSE, warning=FALSE}
+
+### using all features 
+# predict in the test datatset - cforest
+pred_cforest <- predict(train_models$cforest, heart_test, type = "raw")
+
+# predict in the test datatset - loess
+pred_gamLoess <- predict(train_models$gamLoess, heart_test, type = "raw")
+
+# predict in the test datatset - random forest
+pred_rf <- predict(train_models$rf, heart_test, type = "raw")
+
+# predict in the test datatset - random forest
+pred_rpart <- predict(train_models$rpart, heart_test, type = "raw")
+
+### using select features 
+# predict in the test datatset - cforest
+pred_cforest2 <- predict(train_models2$cforest, heart_test, type = "raw")
+
+# predict in the test datatset - loess
+pred_gamLoess2 <- predict(train_models2$gamLoess, heart_test, type = "raw")
+
+# predict in the test datatset - random forest
+pred_rf2 <- predict(train_models2$rf, heart_test, type = "raw")
+
+# predict in the test datatset - random forest
+pred_rpart2 <- predict(train_models2$rpart, heart_test, type = "raw")
+
+# examine the performance of the models in the test set
+mat_results <- as.data.frame(confusionMatrix(pred_cforest, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[1] <- "cForest"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_gamLoess, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[2] <- "Loess"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_rf, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[3] <- "RF"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_rpart, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[4] <- "rpart"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_cforest2, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[5] <- "cForest2"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_gamLoess2, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[6] <- "Loess2"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_rf2, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[7] <- "RF2"
+mat_results <- mat_results %>% bind_cols(confusionMatrix(pred_rpart2, heart_test$DEATH_EVENT, positive = "Yes")$byClass)
+names(mat_results)[8] <- "rpart2"
+
+# examine results in a table 
+mat_results %>%
+  kbl(caption = "Model Results in the Test Dataset", align = "lcccccccc",
+      col.names = c("cForest", "Loess", "RF", "rpart", "cForest", "Loess", "RF", "rpart")) %>%
+  add_header_above(c("", "All Features" = 4, "Select Features" = 4), bold =T) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(1, bold = T) %>%
+  kable_classic(full_width = F) %>%
+  kable_styling(latex_options = "hold_position", font_size = 10)
+```
+
+Comparing across models that included all features and those including the three selected features, the cForest and rpart models performed better with the selected variables across nearly all metrics. In particular, these models increased their sensitivity and negative predictive values with only three features. In contrast, the Loess model yielded generally better results across all metrics using all features, whereas the random forest model varied depending on the metric being considered. 
+
+With respect to balanced accuracy, the best models were rpart with select features, cForest with select features, and Loess with all features. These models also had the three highest F1 scores. In fact, the rpart model using selected features yielded the highest balanced accuracy and F1, as well as sensitivity, negative predictive value, recall, detection rate, and detection prevalence. As well, the Loess model with all features yielded the highest specificity, positive predictive value, and precision, although it had the third highest balanced accuracy and tied for second highest F1. 
+
+Notably, the rpart model with select variables that performed best in the test dataset did not perform as well in the cross-validation. Many other models outperformed this rpart model in Table 10 based on accuracy and kappa values; however, it provided the top results in the test datatset (Table 11). 
+
+\pagebreak
+
+# Discussion
+
+The aim of this project was to predict patient mortality from behavioural, biological, and physiological features using a publicly available dataset. The dataset consisted of records from 299 patients with heart failure who attended one of two healthcare facilities in Pakistan during 2015. The supplemental file includes all the code used for this project, including the code used to download, inspect, and clean the dataset. 
+
+Exploratory data analysis revealed a number of features that may be of particular use in predicting patient death. Based on visualizations, it appeared that age, ejection fraction, serum creatinine, serum sodium, and length of the follow-up were the best features to use for predicting patient death. Inferential analyses including Mann-Whitney U test, Pearson’s Chi-squared test, correlations, and logistic regression confirmed the observations made based on the data visualizations. Due to the measurement of the length of the follow-up period (i.e., time variable), it was excluded from subsequent analyses. As a result, three features remained as the most viable individual predictors of patient mortality: age, ejection fraction, and serum creatinine.  
+
+Next, six machine learning models were run with all the features included in the models and with only the three most important features included in the models. The dataset was split into a training dataset (80%) and a test dataset (20%). Cross-validation was used in the training dataset to tune the model parameters and assess the potential of each model. The various models were examined first based on their performance in the cross-validation in the training dataset, and subsequently, the final models were compared based on their performance in the test dataset. A variety of metrics described in Table 9 were used to compare the predictive utility of the models. The final models used in the test dataset included a generalized additive model using loess (gamLoess), conditional inference random forest (cForest), quantile random forest (Random Forest or rf), and classification and regression tree (rpart). Overall, the rpart model using only three selected features yielded the most accurate predictions in the test dataset. 
+
+The results of this project are generally consistent with the previous published studies that have examined the same dataset. For instance, Ahmad and colleagues (2017) found that age, ejection fraction, serum creatinine, serum sodium, anaemia, and high blood pressure were impacting the likelihood of patient death. Four of these six variables were also identified in the current project as statistically related to patient death. These authors also found that diabetes, sex, and smoking were not related to patient death, which was also seen in the current project. In addition, Chicco and Jurman (2020) used a variety of inferential and machine learning techniques to examine this dataset. They identified ejection fraction and serum creatinine as the most important variables for predicting patient death, largely consistent with the variables identified in the current project. Using 100-fold cross-validation and examining the mean performance across the 100 executions, they found that a random forest model using only the two identified features can be more accurate than including all the features. This is again consistent with the results found here, as some models performed better including only selected variables with high feature ranking. Overall, these results confirm that it is possible to achieve an encouraging level of accuracy in predicting patient death from available features in patients with heart failure. 
+
+## Limitations
+
+Several limitations are noteworthy. First, the size of the dataset (n = 299) was a drawback of the current study. The relatively small size of the dataset raised additional challenges in splitting the data into training and test datasets. Splitting the data when the number of observations is low can be problematic as the test dataset is proportionality smaller, which may impact the representativeness and generalizability of the test dataset. A larger sample size would have also provided more reliable results in terms of sample estimates and accuracy metrics (i.e., larger sample sizes provide more accurate estimates of the underlying parameters). Relatedly, it would have been beneficial to have a separate dataset (i.e., not split from the original) to use after developing the models to provide a better test of their accuracy.
+
+Second, the measurement of certain variables posed some limitations. As mentioned above, the time variable representing the number of days in the follow-up period did not have any detailed explanations as to its measurement. The length of the follow-up period was also strongly correlated with patient death. Accordingly, it may be the case that the number of days surviving with heart failure is predictive of the length of time until death, which would be an informative and useful predictor, or it may be the case that the length of the follow-up period correlated with death due to the way this variable was measured in this dataset. As a result of the unreliability of this measurement, it was excluded from the machine learning models. As well, several variables were recorded in the dataset as binary or dichotomous variables, yet they were based on continuous measurements that may have performed differently in predictive models (i.e., anaemia and high blood pressure).  
+
+## Future Directions  
+
+Machine learning is a useful tool that could be used to improve upon current practices for identifying patients at greatest risk for illness, disorder progression, and death. With respect to the current project, the predictive models should be evaluated in entirely new datasets to continue to understand their predictive accuracy. However, this would require finding another dataset that has the same features and outcome with the same operationalizations and measurement, or the collection of a new validation dataset. Ideally, a much larger dataset could be found to investigate these features further. 
+
+Moving forward, several steps could be taken to improve upon the methods and results obtained here. Future work would benefit from gathering additional variables for inclusion in the machine learning models. Generally, health records include a wealth of information. Researchers should consider the information that is typically available to health care professionals. Potential features should be selected based on prior empirical research, theoretical association with the outcome, and ease of access or availability. The interpretability of the features and models should also be considered with respect to implementation and utility of future models. Machine learning models should be further investigated for other major cardiovascular diseases as well as other types of serious illnesses. Predictive models should investigate disease diagnosis, prognosis, and death. 
+
+\pagebreak
+
+# References 
+
+* Ahmad, T., Munir, A., Bhatti, S. H., Aftab, M., & Raza, M. A. (2017). Survival analysis of heart failure patients: A case study. *PLoS ONE*, *12*(7), e0181001. https://doi.org/10.1371/journal.pone.0181001
+
+* Centers for Disease Control and Prevention. (2020a, September 8). *Heart disease facts*. https://www.cdc.gov/heartdisease/facts.htm
+
+* Centers for Disease Control and Prevention. (2020b, September 8). *Heart failure*. https://www.cdc.gov/heartdisease/heart_failure.htm
+
+* Chicco, D., & Jurman, G. (2020). Machine learning can predict survival of patients with heart failure from serum creatinine and ejection fraction alone. *BMC Medical Informatics and Decision Making*, *20*(16). https://doi.org/10.1186/s12911-020-1023-5
+
+* Heart and Stroke Foundation Canada. (2020a). *Conditions*. https://www.heartandstroke.ca/heart-disease/conditions?gclid=Cj0KCQjwna2FBhDPARIsACAEc_V-S913xvyPrMMrQyz_8_3HBuWayLmUXD8Oln7LwPrE4lvc3d3Xm3IaAvaLEALw_wcB&gclsrc=aw.ds 
+
+* Heart and Stroke Foundation Canada. (2020b). *Heart failure*. https://www.heartandstroke.ca/heart-disease/conditions/heart-failure
+
+* Howell, D. C. (2013). *Statistical methods for psychology* (8th ed.). Wadsworth Cengage Learning. 
+
+* Irizarry, R. A. (2019, October 24). *Introduction to data science*. https://leanpub.com/datasciencebook
+
+* Privitera, G. J. (2018). *Statistics for the behavioral sciences* (3rd ed.). Sage. 
+
+* Public Health Agency of Canada. (2017, February 10). *Heart disease in Canada*. Government of Canada. https://www.canada.ca/en/public-health/services/publications/diseases-conditions/heart-disease-canada.html
+
+* World Health Organization. (2017, May 17). *Cardiovascular diseases (CVDs)*. https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)
+
+* Zahid, F. M., Ramzan, S., Faisal, S., & Hussain, I. (2019). Gender based survival prediction models for heart failure patients: A case study in Pakistan. *PLoS ONE*, *14*(2), e0210602. https://doi.org/ 10.1371/journal.pone.0210602
+
+\pagebreak
+
+# Appendix A - Supplemental Figures
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+### examine continuous variables across ANAEMIA ###
+### all plots stored as separate objects ###
+
+# plot of age across anaemia by death event 
+pp_anm_age <- heart_data_f %>%
+  ggplot(aes(age, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of creatinine phosphokinase levels across anaemia by death event 
+pp_anm_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10(labels = comma) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction levels across anaemia by death event 
+pp_anm_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of platelet levels across anaemia by death event 
+pp_anm_pl <- heart_data_f %>%
+  ggplot(aes(platelets, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine levels across anaemia by death event 
+pp_anm_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium levels across anaemia by death event 
+pp_anm_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of time across anaemia by death event 
+pp_anm_tm <- heart_data_f %>%
+  ggplot(aes(time, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# create a common legend for the plots
+# need to create an entire dummy plot
+pp_anm_tm_legend <- heart_data_f %>%
+  ggplot(aes(time, anaemia, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 3, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -3)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "right") +
+  theme(plot.margin = unit(c(0.5,0.25,0.5,0.25), "cm"))
+
+# extract the legend as an object 
+shared_legend_5 <- extract_legend(pp_anm_tm_legend)
+
+# arrange plots together in a grid for presentation 
+grid.arrange(pp_anm_age, pp_anm_cp, pp_anm_ef, pp_anm_pl, pp_anm_sc, pp_anm_ss, pp_anm_tm, shared_legend_5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,8)),
+             top = "Figure A1: Continuous Variables by Anaemia and Patient Death",
+             left = "Anaemia")
+```
+\
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+### examine continuous variables across DIABETES ###
+### all plots stored as separate objects ###
+
+# plot of age across diabetes by death event 
+pp_db_age <- heart_data_f %>%
+  ggplot(aes(age, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of creatinine phosphokinase levels across diabetes by death event 
+pp_db_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10(labels = comma) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction levels across diabetes by death event 
+pp_db_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of platelet levels across diabetes by death event 
+pp_db_pl <- heart_data_f %>%
+  ggplot(aes(platelets, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine levels across diabetes by death event 
+pp_db_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium levels across diabetes by death event 
+pp_db_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of time across diabetes by death event 
+pp_db_tm <- heart_data_f %>%
+  ggplot(aes(time, diabetes, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(pp_db_age, pp_db_cp, pp_db_ef, pp_db_pl, pp_db_sc, pp_db_ss, pp_db_tm, shared_legend_5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,8)),
+             top = "Figure A2: Continuous Variables by Diabetes and Patient Death",
+             left = "Diabetes")
+```
+\
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+### examine continuous variables across HIGH BLOOD PRESSURE ###
+### all plots stored as separate objects ###
+
+# plot of age across high blood pressure  by death event 
+pp_hbp_age <- heart_data_f %>%
+  ggplot(aes(age, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of creatinine phosphokinase levels across high blood pressure  by death event 
+pp_hbp_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10(labels = comma) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction levels across high blood pressure  by death event 
+pp_hbp_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of platelet levels across high blood pressure  by death event 
+pp_hbp_pl <- heart_data_f %>%
+  ggplot(aes(platelets, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine levels across high blood pressure  by death event 
+pp_hbp_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium levels across high blood pressure  by death event 
+pp_hbp_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of time across high blood pressure  by death event 
+pp_hbp_tm <- heart_data_f %>%
+  ggplot(aes(time, high_blood_pressure, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(pp_hbp_age, pp_hbp_cp, pp_hbp_ef, pp_hbp_pl, pp_hbp_sc, pp_hbp_ss, pp_hbp_tm, shared_legend_5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,8)),
+             top = "Figure A3: Continuous Variables by High Blood Pressure and Patient Death",
+             left = "High Blood Pressure ")
+```
+\
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+
+### examine continuous variables across SEX ###
+### all plots stored as separate objects ###
+
+# plot of age across sex by death event 
+pp_sex_age <- heart_data_f %>%
+  ggplot(aes(age, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of creatinine phosphokinase levels across sex by death event 
+pp_sex_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10(labels = comma) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction levels across sex by death event 
+pp_sex_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of platelet levels across sex by death event 
+pp_sex_pl <- heart_data_f %>%
+  ggplot(aes(platelets, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine levels across sex by death event 
+pp_sex_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium levels across sex by death event 
+pp_sex_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of time across sex by death event 
+pp_sex_tm <- heart_data_f %>%
+  ggplot(aes(time, sex, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(pp_sex_age, pp_sex_cp, pp_sex_ef, pp_sex_pl, pp_sex_sc, pp_sex_ss, pp_sex_tm, shared_legend_5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,8)),
+             top = "Figure A4: Continuous Variables by Sex and Patient Death",
+             left = "Sex")
+```
+\
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+
+### examine continuous variables across SMOKING ###
+### all plots stored as separate objects ###
+
+# plot of age across smoking by death event 
+pp_smk_age <- heart_data_f %>%
+  ggplot(aes(age, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of creatinine phosphokinase levels across smoking by death event 
+pp_smk_cp <- heart_data_f %>%
+  ggplot(aes(creatinine_phosphokinase, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10(labels = comma) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Creatinine Phosphokinase (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction levels across smoking by death event 
+pp_smk_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of platelet levels across smoking by death event 
+pp_smk_pl <- heart_data_f %>%
+  ggplot(aes(platelets, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(labels = comma, breaks = pretty_breaks(n = 5)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Platelets") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine levels across smoking by death event 
+pp_smk_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium levels across smoking by death event 
+pp_smk_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of time across smoking by death event 
+pp_smk_tm <- heart_data_f %>%
+  ggplot(aes(time, smoking, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.5), size = 2, alpha = 0.75) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  stat_summary(aes(group = DEATH_EVENT), fun = "mean", geom = "point", size = 3, colour = "black") +
+  xlab("Length of Follow-up") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(pp_smk_age, pp_smk_cp, pp_smk_ef, pp_smk_pl, pp_smk_sc, pp_smk_ss, pp_smk_tm, shared_legend_5,
+             ncol = 2, layout_matrix = rbind(c(1,1,2,2), c(3,3,4,4), c(5,5,6,6), c(NA,7,7,8)),
+             top = "Figure A5: Continuous Variables by Smoking and Patient Death",
+             left = "Smoking")
+```
+\
+
+```{r echo = FALSE, fig.height=6.5, fig.width=6.5, fig.align="center"}
+
+### looking at interactions between continuous variables - TIME ###
+### all plots stored as separate objects ###
+
+# plot of age and time by death event
+pp_tm_age <- heart_data_f %>%
+  ggplot(aes(age, time, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Age") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection fraction and time by death event
+pp_tm_ef <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, time, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum creatinine and time by death event
+pp_tm_sc <- heart_data_f %>%
+  ggplot(aes(serum_creatinine, time, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_log10() +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium and time by death event
+pp_tm_ss <- heart_data_f %>%
+  ggplot(aes(serum_sodium, time, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_blank()) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# create a common legend for the plots
+# need to create an entire dummy plot
+pp_tm_ss_legend <- heart_data_f %>%
+  ggplot(aes(serum_sodium, time, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_blank()) +
+  theme(legend.position = "top") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# extract the legend as an object 
+shared_legend_10 <- extract_legend(pp_tm_ss_legend)
+
+# arrange plots together in a grid for presentation 
+grid.arrange(shared_legend_10,
+             arrangeGrob(pp_tm_age, pp_tm_ef, pp_tm_sc, pp_tm_ss, 
+                         ncol = 2), 
+             nrow = 2, heights = c(1,20),
+             top = "Figure A6: Continuous Variables by Length of Follow-up and Patient Death",
+             left = "Length of Follow-up")
+```
+
+```{r echo = FALSE, fig.height=8.5, fig.width=6.5, fig.align="center"}
+### looking at interactions between continuous variables - MIXED ###
+### all plots stored as separate objects ###
+
+# plot of ejection fraction and age by death event
+pp_age_ef <- heart_data_f %>%
+  ggplot(aes(age, ejection_fraction, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Age") +
+  ylab("Ejection Fraction") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of secrum creatinine and age by death event
+pp_age_sc <- heart_data_f %>%
+  ggplot(aes(age, serum_creatinine, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Age") +
+  ylab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium and age by death event
+pp_age_ss <- heart_data_f %>%
+  ggplot(aes(age, serum_sodium, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Age") +
+  ylab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection_fraction and secrum creatinine by death event
+pp_ef_sc <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, serum_creatinine, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Ejection Fraction") +
+  ylab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of ejection_fraction and secrum sodium by death event
+pp_ef_ss <- heart_data_f %>%
+  ggplot(aes(ejection_fraction, serum_sodium, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Ejection Fraction") +
+  ylab("Serum Sodium") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# plot of serum sodium and secrum creatinine by death event
+pp_ss_sc <- heart_data_f %>%
+  ggplot(aes(serum_sodium, serum_creatinine, color = DEATH_EVENT, shape = DEATH_EVENT)) + 
+  geom_point(position = position_jitter(h = 0.25, w = 0.25), size = 2, alpha = 0.75) +
+  stat_ellipse(lwd = 1) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_log10() +
+  scale_color_brewer(name = "Death", palette = "Paired") +
+  scale_shape_manual(name = "Death", values = c(15, 17)) +
+  xlab("Serum Sodium") +
+  ylab("Serum Creatinine (log)") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y =  element_text(vjust = 2)) +
+  theme(legend.position = "blank") +
+  theme(plot.margin = unit(c(0.5,0.25,0.25,0.25), "cm"))
+
+# arrange plots together in a grid for presentation 
+grid.arrange(shared_legend_10,
+             arrangeGrob(pp_age_ef, pp_age_sc, pp_age_ss, pp_ef_sc, pp_ef_ss, pp_ss_sc, 
+                         ncol = 2), 
+             nrow = 2, heights = c(1,20),
+             top = "Figure A7: Bivariate Continuous Variables by Patient Death")
+```
+\
+
+```{r echo = FALSE, fig.height=6.5, fig.width=6.5, fig.align="center"}
+# plot of tuning parameters - cforest 
+tuning_cf <- ggplot(train_models$cforest, highlight = TRUE) +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("# Randomly Selected Predictors") +
+  ggtitle("cforest") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(size = 12, vjust = 2, hjust = 0.5)) +
+  theme(plot.margin = unit(c(0.5,0.25,0.5,0.5), "cm"))
+
+# plot of tuning parameters - knn 
+tuning_knn <- ggplot(train_models$knn, highlight = TRUE) +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("# of Neighbours") +
+  ggtitle("KNN") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(size = 12, vjust = 2, hjust = 0.5)) +
+  theme(plot.margin = unit(c(0.5,0.25,0.5,0.5), "cm"))
+
+# plot of tuning parameters - rf 
+tuning_rf <- ggplot(train_models$rf, highlight = TRUE) +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 10)) +
+  xlab("# Randomly Selected Predictors") +
+  ggtitle("Random Forest") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(size = 12, vjust = 2, hjust = 0.5)) +
+  theme(plot.margin = unit(c(0.5,0.25,0.5,0.5), "cm"))
+
+# plot of tuning parameters - rpart
+tuning_rpart <- ggplot(train_models$rpart, highlight = TRUE) +
+  scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+  scale_x_continuous(breaks = pretty_breaks(n = 5)) +
+  xlab("# Randomly Selected Predictors") +
+  ggtitle("rpart") +
+  theme_light() +
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(size = 12, vjust = 2, hjust = 0.5)) +
+  theme(plot.margin = unit(c(0.5,0.25,0.5,0.5), "cm"))
+
+# arrange tuning plots together in a grid for presentation 
+grid.arrange(tuning_cf, tuning_knn, tuning_rf, tuning_rpart,
+             ncol = 2, 
+             top = "Figure A8: Tuning Parameters across Models - All Features",
+             left = "Accuracy in Cross-Validation")
+```
+
+
+\pagebreak
+
+# Appendix B - Environment
+
+This project and code were completed using the following specifications:  
+
+```{r print environment, echo = FALSE}
+version
+```
